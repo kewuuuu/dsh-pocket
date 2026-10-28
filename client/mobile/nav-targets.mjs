@@ -37,11 +37,24 @@ export const NAV_TARGETS = [
 ].join(', ')
 
 /**
- * 行内操作按钮（会话行的 kebab：重命名 / 删除）——点开的是菜单不是内容，
- * 不能按导航处理，否则抽屉一关，刚弹出的菜单跟着没了。
+ * 行内操作按钮（会话行的 kebab：重命名 / 删除，以及归档 / 置顶）——点开的
+ * 是菜单或就地改状态，不是内容；不能按导航处理，否则抽屉一关，刚弹出的菜单
+ * 跟着没了。
+ *
+ * 不能只认 `button`：归档/置顶是 renderSlot 注入的控件，宿主不同版本可能用
+ * div + role="button"、data-action 或纯 aria-label 渲染，所以按"任何可点击
+ * 控件"收口（见 mobile.css.ts 里强制显示 rowActions 的规则——按钮真正可见
+ * 之后，这里一旦漏判，点一下就会连同抽屉一起关掉）。
  * @type {string}
  */
-export const NAV_EXCLUDE = '[class*="sessionRow"] button'
+export const NAV_EXCLUDE = [
+  '[class*="sessionRow"] button',
+  '[class*="sessionRow"] [role="button"]',
+  '[class*="sessionRow"] [data-action]',
+  '[class*="sessionRow"] [aria-label*="archive" i]',
+  '[class*="sessionRow"] [aria-label*="归档"]',
+  '[class*="sessionRow"] [title*="归档"]',
+].join(', ')
 
 /**
  * 浮层（portal 到 body 的下拉菜单 / 弹窗）。

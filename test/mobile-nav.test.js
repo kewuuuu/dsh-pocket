@@ -153,10 +153,49 @@ test('移除 web-ui-all 在 frame 上的全屏 ::after 遮罩 —— issue #67',
   );
 });
 
+test('抽屉里弹出的浮层压在抽屉之上（手机端所有下拉菜单）', () => {
+  const css = readFileSync(new URL('../client/mobile/mobile.css.ts', import.meta.url), 'utf8');
+  // 宿主把 portal 菜单渲染到 body：position:fixed; z-index:1100（web-frontend 的
+  // _portal_ 规则），而抽屉是 1200 —— 不抬升就会有"菜单在侧边栏底下"的 bug：
+  // 会话行 kebab、工作区视图选项、左下角账号菜单全都点不出来。
+  const rule = css.match(
+    /body:has\(\[data-mobile-nav="frame"\]\) \[role="menu"\][\s\S]{0,400}?z-index:\s*(\d+)\s*!/,
+  );
+  assert.ok(rule, '必须有把 [role="menu"] 抬到抽屉之上的规则');
+  assert.ok(Number(rule[1]) > 1200, `菜单 z-index ${rule[1]} 压不过抽屉的 1200`);
+  assert.ok(Number(rule[1]) < 9999, `菜单 z-index ${rule[1]} 不该盖住视口级 banner/toast`);
+  assert.ok(css.includes('[role="listbox"]'), 'listbox 浮层同样要抬升');
+  assert.ok(css.includes('[data-radix-popper-content-wrapper]'), 'radix 浮层同样要抬升');
+});
+
+test('会话行操作在触摸端强制可见，且点它不关抽屉', () => {
+  const css = readFileSync(new URL('../client/mobile/mobile.css.ts', import.meta.url), 'utf8');
+  // 宿主 Rows.css 里 .rowActions 是 display:none，只在 :hover / 菜单打开时变成
+  // inline-flex。手机没有 hover，按钮根本不渲染，点下去命中的是会话行本身，
+  // 于是"点三点按钮却打开会话"。必须覆盖容器 display，改子元素 opacity 无效。
+  assert.ok(
+    /\[data-mobile-nav="frame"\] \[class\*="sessionRow"\] \[class\*="rowActions"\]\s*\{[^}]*display:\s*inline-flex\s*!/.test(
+      css,
+    ),
+    '必须把 rowActions 容器强制设回 inline-flex',
+  );
+  assert.ok(
+    /\[class\*="rowActions"\]\s*\[role="button"\]/.test(css) ||
+      css.includes('[class*="rowActions"] [role="button"]'),
+    '归档/置顶等 role=button 控件也要撑出可用点击区',
+  );
+  // 真正显示出来后，点击判定必须把它们排除出"导航"，否则抽屉会随点随关。
+  assert.notEqual(navTargetFor(stub('[class*="sessionRow"]')), null);
+  assert.equal(navTargetFor(stub('[class*="sessionRow"] [role="button"]')), null);
+  assert.equal(navTargetFor(stub('[class*="sessionRow"] [data-action]')), null);
+  assert.equal(navTargetFor(stub('[class*="sessionRow"] [aria-label*="归档"]')), null);
+  assert.equal(navTargetFor(stub('[class*="sessionRow"] [aria-label*="archive" i]')), null);
+});
+
 test('打包产物里带上抽屉规则的关键字', () => {
   const bundle = readFileSync(new URL('../client/client.js', import.meta.url), 'utf8');
   // client/client.js 是 esbuild 产物，跑测试前需先 npm run build:client
-  for (const needle of ['sessionRow', 'searchResultWorkspace', 'role="menu"', 'pointerType']) {
+  for (const needle of ['sessionRow', 'searchResultWorkspace', 'role="menu"', 'pointerType', 'rowActions']) {
     assert.ok(bundle.includes(needle), `打包产物缺少 "${needle}" —— 先跑 npm run build:client`);
   }
 });

@@ -238,6 +238,18 @@ export const MOBILE_CSS = `
     border-right: none !important;
   }
 
+  /* Popovers opened from the drawer must paint above its 1200 layer. The host
+     portalled menu wrapper is position:fixed with z-index 1100 (web-frontend's
+     _portal_ rule), so on phones every dropdown the drawer opens — session
+     kebab, workspace "view options", the account menu — ends up *behind* the
+     open sidebar. Lift just the popover layers above the drawer; modal dialogs
+     keep their own higher host layer. */
+  body:has([data-mobile-nav="frame"]) [role="menu"],
+  body:has([data-mobile-nav="frame"]) [role="listbox"],
+  body:has([data-mobile-nav="frame"]) [data-radix-popper-content-wrapper] {
+    z-index: 1300 !important;
+  }
+
   /* Expanded state (frame without data-sidebar-collapsed) slides the drawer in.
      The open state must be transform:none — NOT translateX(0): an identity
      transform still makes the drawer the containing block for fixed-position
@@ -648,6 +660,36 @@ export const MOBILE_CSS = `
   /* The Files action opens the explorer sheet (frame marker). */
   [data-mobile-nav="frame"][data-aionui-explorer-open] [data-aionui-explorer-col] {
     visibility: visible !important;
+  }
+  /* Session row actions must be directly usable on touch devices. The host
+     keeps the whole .rowActions container display:none and only flips it to
+     inline-flex on :hover / while its menu is open (Rows.css). Phones never
+     hover, so the kebab / archive / pin buttons are not merely invisible —
+     they are not rendered at all, and every tap on that spot lands on the row
+     underneath, which opens the session. Force the container visible and
+     mirror the hover state: the time label and pin indicator it normally
+     replaces are hidden instead. */
+  [data-mobile-nav="frame"] [class*="sessionRow"] [class*="rowActions"] {
+    display: inline-flex !important;
+    gap: 8px !important;
+  }
+  [data-mobile-nav="frame"] [class*="sessionRow"]:has([class*="rowActions"]) [class*="time"],
+  [data-mobile-nav="frame"] [class*="sessionRow"]:has([class*="rowActions"]) [class*="pinIndicator"] {
+    display: none !important;
+  }
+  /* Host icon buttons are 16px squares; give them a finger-sized hit area so
+     the row does not have to be tapped precisely. */
+  [data-mobile-nav="frame"] [class*="sessionRow"] [class*="rowActions"] button,
+  [data-mobile-nav="frame"] [class*="sessionRow"] [class*="rowActions"] [role="button"] {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-width: 28px !important;
+    min-height: 28px !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+    touch-action: manipulation !important;
   }
   /* The open drawer must never sit under a sheet: while the frame is in the
      narrow-expanded state both sheets yield (later in the file than the
